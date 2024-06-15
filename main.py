@@ -6,7 +6,7 @@ from telethon import TelegramClient, events
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
@@ -195,6 +195,7 @@ async def hezu_group_handler(event):
             parsed_message = await parse_message(
                 event.message, is_channel=False
             )
+            logger.debug(f'Parse Group Message: {parsed_message}')
             db_manager.add_record(parsed_message)
             owner_id = parsed_message['owner_id']
             try:
@@ -226,6 +227,7 @@ async def hezu_group_handler(event):
                     f'Error counting messages: {e}\n{traceback.format_exc()}'
                 )
             message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
+            logger.debug(f'Ready to Transfer Group Message: {message}')
             await client.send_message(
                 int(environment.hezu_summary_chatid), message
             )
@@ -250,6 +252,7 @@ async def hezu_channel_handler(event):
             pass
         else:
             parsed_message = await parse_message(event.message)
+            logger.debug(f'Parse Channel Message: {parsed_message}')
             db_manager.add_record(parsed_message)
             owner_id = parsed_message['owner_id']
             try:
@@ -281,6 +284,7 @@ async def hezu_channel_handler(event):
                     f'Error counting messages: {e}\n{traceback.format_exc()}'
                 )
             message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
+            logger.debug(f'Ready to Transfer Channel Message: {message}')
             await client.send_message(
                 int(environment.hezu_summary_chatid), message
             )

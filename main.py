@@ -139,6 +139,9 @@ async def init_group_messages():
 
 
 async def main():
+    # Getting information about yourself
+    me = await client.get_me()
+    print(me)
     await init_channel_messages()
     print('channel message update success')
     await init_group_messages()

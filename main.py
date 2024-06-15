@@ -199,35 +199,43 @@ async def hezu_group_handler(event):
             )
             logger.debug(f'Parse Group Message: {parsed_message}')
             db_manager.add_record(parsed_message)
-            owner_id = parsed_message['owner_id']
-            try:
-                usernames = db_manager.get_user_info(owner_id)
-            except Exception as e:
-                usernames = []
-                logger.error(
-                    f'Error getting usernames: {e}\n{traceback.format_exc()}'
-                )
-            if usernames:
-                usernames_str = ','.join(usernames)
-            else:
-                usernames_str = '无改名记录'
-            try:
-                if owner_id:
-                    channel_count = (
-                        db_manager.count_non_null_channel_message_id(owner_id)
+            user_id = parsed_message['owner_id'] or parsed_message['sender_id']
+            if user_id:
+                try:
+                    usernames = db_manager.get_user_info(user_id)
+                except Exception as e:
+                    usernames = []
+                    logger.error(
+                        f'Error getting usernames: {e}\n{traceback.format_exc()}'  # noqa
                     )
-                    group_count = db_manager.count_non_null_group_message_id(
-                        owner_id
-                    )
+                if usernames:
+                    usernames_str = ','.join(usernames)
                 else:
+                    usernames_str = '无改名记录'
+                try:
+                    if user_id:
+                        channel_count = (
+                            db_manager.count_non_null_channel_message_id(
+                                user_id
+                            )
+                        )
+                        group_count = (
+                            db_manager.count_non_null_group_message_id(user_id)
+                        )
+                    else:
+                        channel_count = '未查到相关记录'
+                        group_count = '未查到相关记录'
+                except Exception as e:
                     channel_count = '未查到相关记录'
                     group_count = '未查到相关记录'
-            except Exception as e:
+                    logger.error(
+                        f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
+                    )
+            else:
+                usernames = []
+                usernames_str = '无改名记录'
                 channel_count = '未查到相关记录'
                 group_count = '未查到相关记录'
-                logger.error(
-                    f'Error counting messages: {e}\n{traceback.format_exc()}'
-                )
             message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
             logger.debug(f'Ready to Transfer Group Message: {message}')
             try:
@@ -266,35 +274,43 @@ async def hezu_channel_handler(event):
             parsed_message = await parse_message(event.message)
             logger.debug(f'Parse Channel Message: {parsed_message}')
             db_manager.add_record(parsed_message)
-            owner_id = parsed_message['owner_id']
-            try:
-                usernames = db_manager.get_user_info(owner_id)
-            except Exception as e:
-                usernames = []
-                logger.error(
-                    f'Error getting usernames: {e}\n{traceback.format_exc()}'
-                )
-            if usernames:
-                usernames_str = ','.join(usernames)
-            else:
-                usernames_str = '无改名记录'
-            try:
-                if owner_id:
-                    channel_count = (
-                        db_manager.count_non_null_channel_message_id(owner_id)
+            user_id = parsed_message['owner_id'] or parsed_message['sender_id']
+            if user_id:
+                try:
+                    usernames = db_manager.get_user_info(user_id)
+                except Exception as e:
+                    usernames = []
+                    logger.error(
+                        f'Error getting usernames: {e}\n{traceback.format_exc()}'  # noqa
                     )
-                    group_count = db_manager.count_non_null_group_message_id(
-                        owner_id
-                    )
+                if usernames:
+                    usernames_str = ','.join(usernames)
                 else:
+                    usernames_str = '无改名记录'
+                try:
+                    if user_id:
+                        channel_count = (
+                            db_manager.count_non_null_channel_message_id(
+                                user_id
+                            )
+                        )
+                        group_count = (
+                            db_manager.count_non_null_group_message_id(user_id)
+                        )
+                    else:
+                        channel_count = '未查到相关记录'
+                        group_count = '未查到相关记录'
+                except Exception as e:
                     channel_count = '未查到相关记录'
                     group_count = '未查到相关记录'
-            except Exception as e:
+                    logger.error(
+                        f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
+                    )
+            else:
+                usernames = []
+                usernames_str = '无改名记录'
                 channel_count = '未查到相关记录'
                 group_count = '未查到相关记录'
-                logger.error(
-                    f'Error counting messages: {e}\n{traceback.format_exc()}'
-                )
             message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
             logger.debug(f'Ready to Transfer Channel Message: {message}')
             try:

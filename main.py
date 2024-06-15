@@ -35,14 +35,16 @@ async def parse_message(message, is_channel=True):
     except:
         service_name = None
     if message.sender is None:
+        print('get from from_id')
         sender_id = message.from_id.user_id
         try:
             await client.get_dialogs()
-            user = await client.get_entity(owner_username)
+            user = await client.get_entity(sender_id)
             sender_username = user.username
         except:
             sender_username = None
     else:
+        print('get from sender')
         sender_id = message.sender.id
         sender_username = message.sender.username
     message_info = (

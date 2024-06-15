@@ -56,12 +56,10 @@ class DBManager:
             usernames = (
                 session.query(
                     case(
-                        [
-                            (
-                                owner_alias.owner_username.isnot(None),
-                                owner_alias.owner_username,
-                            )
-                        ],
+                        (
+                            owner_alias.owner_username.isnot(None),
+                            owner_alias.owner_username,
+                        ),
                         else_=sender_alias.sender_username,
                     ).label('username')
                 )
@@ -101,12 +99,10 @@ class DBManager:
             usernames = (
                 session.query(
                     case(
-                        [
-                            (
-                                owner_alias.owner_username.isnot(None),
-                                owner_alias.owner_username,
-                            )
-                        ],
+                        (
+                            owner_alias.owner_username.isnot(None),
+                            owner_alias.owner_username,
+                        ),
                         else_=sender_alias.sender_username,
                     ).label('username')
                 )

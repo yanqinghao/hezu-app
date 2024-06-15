@@ -1,4 +1,5 @@
 from env import environment
+from db.manager import db_manager
 from telethon import TelegramClient, events
 
 # Remember to use your own values from my.telegram.org!
@@ -10,12 +11,105 @@ client = TelegramClient(
 )
 
 
-async def init_db():
+async def parse_message(message, is_channel=True):
+    try:
+        owner_username = message.text.split('@')[-1].strip()
+    except:
+        owner_username = None
+    try:
+        if owner_username:
+            owner_id = await client.get_peer_id(owner_username)
+        else:
+            owner_id = None
+    except:
+        owner_id = None
+    try:
+        service_name = message.text.split(' ')[0].strip('#').strip()
+    except:
+        service_name = None
+    message_info = (
+        {
+            'message': message.text,
+            'channel_message_id': message.id,
+            # "price": message.text,
+            'owner_username': owner_username,
+            'owner_id': owner_id,
+            'sender_username': message.sender.username,
+            'sender_id': message.sender.id,
+            'service_name': service_name,
+            # "user_num": 1,
+            # "expiration_date": message.text
+        }
+        if is_channel
+        else {
+            'message': message.text,
+            'group_message_id': message.id,
+            # "price": message.text,
+            'owner_username': owner_username,
+            'owner_id': owner_id,
+            'sender_username': message.sender.username,
+            'sender_id': message.sender.id,
+            'service_name': service_name,
+            # "user_num": 1,
+            # "expiration_date": message.text
+        }
+    )
+    return message_info
+
+
+async def init_channel_messages():
     # 获取DB最新消息
-    pass
+    last_channel_id = db_manager.get_latest_channel_message_id()
+    records = []
+
+    async for message in client.iter_messages(
+        int(environment.hezu_channel_chatid),
+        search='(?i)#+',
+        limit=environment.channel_message_limit,
+    ):  # noqa
+        if message.text[0] != '#':
+            continue
+        parsed_message = await parse_message(message)
+        if (
+            last_channel_id
+            and parsed_message['channel_message_id'] == last_channel_id
+        ):
+            if records:
+                db_manager.add_records(records)
+            break
+        records.append(parsed_message)
+        if len(records) >= int(environment.batch_size):
+            db_manager.add_records(records)
+
+
+async def init_group_messages():
+    # 获取DB最新消息
+    last_channel_id = db_manager.get_latest_channel_message_id()
+    records = []
+
+    async for message in client.iter_messages(
+        int(environment.hezu_channel_chatid),
+        search='(?i)#非审核车+',
+        limit=environment.channel_message_limit,
+    ):  # noqa
+        if message.text[0] != '#':
+            continue
+        parsed_message = await parse_message(message, is_channel=False)
+        if (
+            last_channel_id
+            and parsed_message['channel_message_id'] == last_channel_id
+        ):
+            if records:
+                db_manager.add_records(records)
+            break
+        records.append(parsed_message)
+        if len(records) >= int(environment.batch_size):
+            db_manager.add_records(records)
 
 
 async def main():
+
+    await init_channel_messages()
     # Getting information about yourself
     me = await client.get_me()
 
@@ -30,10 +124,11 @@ async def main():
     print(username)
     print(me.phone)
     print(me.id)
+    await client.get_peer_id()
 
     # You can print all the dialogs/conversations that you are part of:
-    # async for dialog in client.iter_dialogs():
-    #     print(dialog.name, 'has ID', dialog.id)
+    async for dialog in client.iter_dialogs():
+        print(dialog.name, 'has ID', dialog.id)
 
     # # You can, of course, use markdown in your messages:
     # message = await client.send_message(

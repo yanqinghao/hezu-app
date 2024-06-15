@@ -22,6 +22,17 @@ class Environment(dict):
         self.db_user = os.environ.get('DB_USER')
         self.db_password = os.environ.get('DB_PASSWORD')
         self.db_name = os.environ.get('DB_NAME')
+        self.batch_size = os.environ.get('BATCH_SIZE', 1000)
+        self.channel_message_limit = (
+            int(os.environ.get('CHANNEL_MESSAGE_LIMIT', None))
+            if os.environ.get('CHANNEL_MESSAGE_LIMIT', None)
+            else None
+        )
+        self.group_message_limit = (
+            int(os.environ.get('CHANNEL_MESSAGE_LIMIT', None))
+            if os.environ.get('CHANNEL_MESSAGE_LIMIT', None)
+            else None
+        )
 
 
 environment = Environment()

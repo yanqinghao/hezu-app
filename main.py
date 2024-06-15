@@ -46,7 +46,12 @@ async def parse_message(message, is_channel=True):
     else:
         print('get from sender')
         sender_id = message.sender.id
-        sender_username = message.sender.username
+        try:
+            await client.get_dialogs()
+            user = await client.get_entity(sender_id)
+            sender_username = user.username
+        except:
+            sender_username = None
     message_info = (
         {
             'message': message.text,

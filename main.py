@@ -1,4 +1,5 @@
 import logging
+import traceback
 from env import environment
 from db.manager import db_manager
 from telethon import TelegramClient, events
@@ -22,16 +23,19 @@ client = TelegramClient(
 async def parse_message(message, is_channel=True):
     try:
         owner_username = message.text.split('@')[-1].strip()
-    except:
+    except Exception as e:
         owner_username = None
+        logger.error(
+            f'Error parsing owner_username: {e}\n{traceback.format_exc()}'
+        )
     try:
         if owner_username:
-            await client.get_dialogs()
             owner_id = await client.get_peer_id(owner_username)
         else:
             owner_id = None
-    except:
+    except Exception as e:
         owner_id = None
+        logger.error(f'Error getting owner_id: {e}\n{traceback.format_exc()}')
     try:
         service_name = (
             message.text.replace('#非审核车', '')
@@ -40,26 +44,33 @@ async def parse_message(message, is_channel=True):
             .strip('#')
             .strip()
         )
-    except:
+    except Exception as e:
         service_name = None
+        logger.error(
+            f'Error parsing service_name: {e}\n{traceback.format_exc()}'
+        )
     if message.sender is None:
         logger.info('get from from_id')
         sender_id = message.from_id.user_id
         try:
-            await client.get_dialogs()
             user = await client.get_entity(sender_id)
             sender_username = user.username
-        except:
+        except Exception as e:
             sender_username = None
+            logger.error(
+                f'Error getting sender_username: {e}\n{traceback.format_exc()}'
+            )
     else:
         logger.info('get from sender')
         sender_id = message.sender.id
         try:
-            await client.get_dialogs()
             user = await client.get_entity(sender_id)
             sender_username = user.username
-        except:
+        except Exception as e:
             sender_username = None
+            logger.error(
+                f'Error getting sender_username: {e}\n{traceback.format_exc()}'
+            )
     message_info = (
         {
             'message': message.text,
@@ -115,7 +126,9 @@ async def init_channel_messages():
                 db_manager.add_records(records)
                 records = []
         except Exception as e:
-            logger.error(e)
+            logger.error(
+                f'Error in init_channel_messages: {e}\n{traceback.format_exc()}'  # noqa
+            )
     if records:
         logger.info('write remain channel message rows to table')
         db_manager.add_records(records)
@@ -147,7 +160,9 @@ async def init_group_messages():
                 db_manager.add_records(records)
                 records = []
         except Exception as e:
-            logger.error(e)
+            logger.error(
+                f'Error in init_group_messages: {e}\n{traceback.format_exc()}'
+            )
 
     if records:
         logger.info('write remain group message rows to table')
@@ -156,12 +171,15 @@ async def init_group_messages():
 
 
 async def main():
-    me = await client.get_me()
-    logger.info(me)
-    await init_channel_messages()
-    logger.info('channel message update success')
-    await init_group_messages()
-    logger.info('group message update success')
+    try:
+        me = await client.get_me()
+        logger.info(me)
+        await init_channel_messages()
+        logger.info('channel message update success')
+        await init_group_messages()
+        logger.info('group message update success')
+    except Exception as e:
+        logger.error(f'Error in main: {e}\n{traceback.format_exc()}')
 
 
 @client.on(
@@ -172,6 +190,7 @@ async def main():
 async def hezu_group_handler(event):
     try:
         logger.info(f'receive message for group: {event.message.text}')
+        await client.get_dialogs()
         if event.message.text.startswith('#非审核车'):
             parsed_message = await parse_message(
                 event.message, is_channel=False
@@ -180,8 +199,11 @@ async def hezu_group_handler(event):
             owner_id = parsed_message['owner_id']
             try:
                 usernames = db_manager.get_user_info(owner_id)
-            except:
+            except Exception as e:
                 usernames = []
+                logger.error(
+                    f'Error getting usernames: {e}\n{traceback.format_exc()}'
+                )
             if usernames:
                 usernames_str = ','.join(usernames)
             else:
@@ -197,15 +219,20 @@ async def hezu_group_handler(event):
                 else:
                     channel_count = '未查到相关记录'
                     group_count = '未查到相关记录'
-            except:
+            except Exception as e:
                 channel_count = '未查到相关记录'
                 group_count = '未查到相关记录'
+                logger.error(
+                    f'Error counting messages: {e}\n{traceback.format_exc()}'
+                )
             message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
             await client.send_message(
                 int(environment.hezu_summary_chatid), message
             )
     except Exception as e:
-        logger.error(e)
+        logger.error(
+            f'Error in hezu_group_handler: {e}\n{traceback.format_exc()}'
+        )
 
 
 @client.on(
@@ -216,6 +243,7 @@ async def hezu_group_handler(event):
 async def hezu_channel_handler(event):
     try:
         logger.info(f'receive message for channel: {event.message.text}')
+        await client.get_dialogs()
         if event.message.text[0] != '#' or event.message.text.startswith(
             '#恰饭广告'
         ):
@@ -226,8 +254,11 @@ async def hezu_channel_handler(event):
             owner_id = parsed_message['owner_id']
             try:
                 usernames = db_manager.get_user_info(owner_id)
-            except:
+            except Exception as e:
                 usernames = []
+                logger.error(
+                    f'Error getting usernames: {e}\n{traceback.format_exc()}'
+                )
             if usernames:
                 usernames_str = ','.join(usernames)
             else:
@@ -243,17 +274,23 @@ async def hezu_channel_handler(event):
                 else:
                     channel_count = '未查到相关记录'
                     group_count = '未查到相关记录'
-            except:
+            except Exception as e:
                 channel_count = '未查到相关记录'
                 group_count = '未查到相关记录'
+                logger.error(
+                    f'Error counting messages: {e}\n{traceback.format_exc()}'
+                )
             message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
             await client.send_message(
                 int(environment.hezu_summary_chatid), message
             )
     except Exception as e:
-        logger.error(e)
+        logger.error(
+            f'Error in hezu_channel_handler: {e}\n{traceback.format_exc()}'
+        )
 
 
-with client:
-    client.loop.run_until_complete(main())
-    client.run_until_disconnected()
+if __name__ == '__main__':
+    with client:
+        client.loop.run_until_complete(main())
+        client.run_until_disconnected()

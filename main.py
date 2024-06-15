@@ -183,7 +183,10 @@ async def hezu_group_handler(event):
                 usernames = db_manager.get_user_info(owner_id)
             except:
                 usernames = []
-            usernames_str = ','.join(usernames)
+            if usernames:
+                usernames_str = ','.join(usernames)
+            else:
+                usernames_str = '无改名记录'
             try:
                 if owner_id:
                     channel_count = (
@@ -232,7 +235,10 @@ async def hezu_channel_handler(event):
                 usernames = db_manager.get_user_info(owner_id)
             except:
                 usernames = []
-            usernames_str = ','.join(usernames)
+            if usernames:
+                usernames_str = ','.join(usernames)
+            else:
+                usernames_str = '无改名记录'
             try:
                 if owner_id:
                     channel_count = (

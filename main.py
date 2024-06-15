@@ -165,6 +165,7 @@ async def hezu_group_handler(event):
     # 查询数据库中该用户信息：几次更改昵称，几次开审核车，几次开非审核车，最近一周开车x次，最近一月开车x次，该车平均价位，该区平均价位
     # 推送汇总频道：当前合租信息，结合历史数据分析结果
     try:
+        print(f'receive message for group: {event.message.text}')
         if event.message.text.startswith('#非审核车'):
             parsed_message = await parse_message(event.message)
             db_manager.add_record(parsed_message)
@@ -209,12 +210,13 @@ async def hezu_channel_handler(event):
     # 查询数据库中该用户信息：几次更改昵称，几次开审核车，几次开非审核车，最近一周开车x次，最近一月开车x次，该车平均价位，该区平均价位
     # 推送汇总频道：当前合租信息，结合历史数据分析结果
     try:
-        if event.message.message.text[
-            0
-        ] != '#' or event.message.message.text.startswith('#恰饭广告'):
+        print(f'receive message for channel: {event.message.text}')
+        if event.message.text[0] != '#' or event.message.text.startswith(
+            '#恰饭广告'
+        ):
             pass
         else:
-            parsed_message = await parse_message(event.message.message)
+            parsed_message = await parse_message(event.message)
             db_manager.add_record(parsed_message)
             owner_id = parsed_message['owner_id']
             try:

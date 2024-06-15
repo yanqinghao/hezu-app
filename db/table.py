@@ -21,3 +21,4 @@ class HezuRecords(Base):
     user_num = Column(Integer)
     expiration_date = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    send_at = Column(DateTime(timezone=True))

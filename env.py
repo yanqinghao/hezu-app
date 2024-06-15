@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv('private/env')
+load_dotenv('private/env.home')
 
 
 class Environment(dict):
@@ -29,8 +29,8 @@ class Environment(dict):
             else None
         )
         self.group_message_limit = (
-            int(os.environ.get('CHANNEL_MESSAGE_LIMIT', None))
-            if os.environ.get('CHANNEL_MESSAGE_LIMIT', None)
+            int(os.environ.get('GROUP_MESSAGE_LIMIT', None))
+            if os.environ.get('GROUP_MESSAGE_LIMIT', None)
             else None
         )
 

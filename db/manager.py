@@ -1,7 +1,7 @@
 from env import environment
 from db.table import Base, HezuRecords
 from urllib.parse import quote_plus
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, cast, Integer
 from sqlalchemy.orm import sessionmaker
 
 
@@ -45,6 +45,40 @@ class DBManager:
         finally:
             session.close()
 
+    def count_non_null_channel_message_id(self, user_id):
+        session = self.session()
+        try:
+            # 获取 owner_id 或 sender_id 等于 user_id 的所有记录
+            count = (
+                session.query(func.count(HezuRecords.id))
+                .filter(
+                    (HezuRecords.owner_id == user_id)
+                    | (HezuRecords.sender_id == user_id),
+                    HezuRecords.channel_message_id.isnot(None),
+                )
+                .scalar()
+            )
+            return count
+        finally:
+            session.close()
+
+    def count_non_null_group_message_id(self, user_id):
+        session = self.session()
+        try:
+            # 获取 owner_id 或 sender_id 等于 user_id 的所有记录
+            count = (
+                session.query(func.count(HezuRecords.id))
+                .filter(
+                    (HezuRecords.owner_id == user_id)
+                    | (HezuRecords.sender_id == user_id),
+                    HezuRecords.group_message_id.isnot(None),
+                )
+                .scalar()
+            )
+            return count
+        finally:
+            session.close()
+
     def add_records(self, records: list):
         session = self.session()
         try:
@@ -61,7 +95,18 @@ class DBManager:
         try:
             # 获取最大 message_id
             max_message_id = session.query(
-                func.max(HezuRecords.channel_message_id)
+                func.max(cast(HezuRecords.channel_message_id, Integer))
+            ).scalar()
+            return max_message_id
+        finally:
+            session.close()
+
+    def get_latest_group_message_id(self):
+        session = self.session()
+        try:
+            # 获取最大 message_id
+            max_message_id = session.query(
+                func.max(cast(HezuRecords.group_message_id, Integer))
             ).scalar()
             return max_message_id
         finally:

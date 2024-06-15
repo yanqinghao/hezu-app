@@ -1,8 +1,8 @@
 from env import environment
 from db.table import Base, HezuRecords
 from urllib.parse import quote_plus
-from sqlalchemy import create_engine, func, cast, Integer
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, func, cast, Integer, case
+from sqlalchemy.orm import sessionmaker, aliased
 
 
 class DBManager:
@@ -48,13 +48,41 @@ class DBManager:
     def count_non_null_channel_message_id(self, user_id):
         session = self.session()
         try:
-            # 获取 owner_id 或 sender_id 等于 user_id 的所有记录
+            # 创建别名用于用户查询
+            owner_alias = aliased(HezuRecords)
+            sender_alias = aliased(HezuRecords)
+
+            # 查找 user_id 对应的所有用户名
+            usernames = (
+                session.query(
+                    case(
+                        [
+                            (
+                                owner_alias.owner_username.isnot(None),
+                                owner_alias.owner_username,
+                            )
+                        ],
+                        else_=sender_alias.sender_username,
+                    ).label('username')
+                )
+                .filter(
+                    (owner_alias.owner_id == user_id)
+                    | (sender_alias.sender_id == user_id)
+                )
+                .distinct()
+                .all()
+            )
+            usernames = [username[0] for username in usernames if username]
+
+            # 使用这些用户名和 user_id 查找记录数量
             count = (
                 session.query(func.count(HezuRecords.id))
                 .filter(
                     (HezuRecords.owner_id == user_id)
                     | (HezuRecords.sender_id == user_id),
                     HezuRecords.channel_message_id.isnot(None),
+                    (HezuRecords.owner_username.in_(usernames))
+                    | (HezuRecords.sender_username.in_(usernames)),
                 )
                 .scalar()
             )
@@ -65,13 +93,41 @@ class DBManager:
     def count_non_null_group_message_id(self, user_id):
         session = self.session()
         try:
-            # 获取 owner_id 或 sender_id 等于 user_id 的所有记录
+            # 创建别名用于用户查询
+            owner_alias = aliased(HezuRecords)
+            sender_alias = aliased(HezuRecords)
+
+            # 查找 user_id 对应的所有用户名
+            usernames = (
+                session.query(
+                    case(
+                        [
+                            (
+                                owner_alias.owner_username.isnot(None),
+                                owner_alias.owner_username,
+                            )
+                        ],
+                        else_=sender_alias.sender_username,
+                    ).label('username')
+                )
+                .filter(
+                    (owner_alias.owner_id == user_id)
+                    | (sender_alias.sender_id == user_id)
+                )
+                .distinct()
+                .all()
+            )
+            usernames = [username[0] for username in usernames if username]
+
+            # 使用这些用户名和 user_id 查找记录数量
             count = (
                 session.query(func.count(HezuRecords.id))
                 .filter(
                     (HezuRecords.owner_id == user_id)
                     | (HezuRecords.sender_id == user_id),
                     HezuRecords.group_message_id.isnot(None),
+                    (HezuRecords.owner_username.in_(usernames))
+                    | (HezuRecords.sender_username.in_(usernames)),
                 )
                 .scalar()
             )

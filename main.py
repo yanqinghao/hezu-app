@@ -253,7 +253,7 @@ async def hezu_channel_handler(event):
             except:
                 channel_count = '未查到相关记录'
                 group_count = '未查到相关记录'
-            message = f'{event.message.message}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
+            message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
             await client.send_message(
                 int(environment.hezu_summary_chatid), message
             )

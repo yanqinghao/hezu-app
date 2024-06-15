@@ -1,8 +1,10 @@
 import logging
+import asyncio
 import traceback
 from env import environment
 from db.manager import db_manager
 from telethon import TelegramClient, events
+from telethon.errors import FloodError
 
 # Configure logging
 logging.basicConfig(
@@ -228,9 +230,19 @@ async def hezu_group_handler(event):
                 )
             message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
             logger.debug(f'Ready to Transfer Group Message: {message}')
-            await client.send_message(
-                int(environment.hezu_summary_chatid), message
-            )
+            try:
+                await client.send_message(
+                    int(environment.hezu_summary_chatid), message
+                )
+            except FloodError as e:
+                logger.error(
+                    f'Error in hezu_group_handler: {e}\n{traceback.format_exc()}'  # noqa
+                )
+                logger.info('Waiting for 300 seconds, and retry...')
+                await asyncio.sleep(300)
+                await client.send_message(
+                    int(environment.hezu_summary_chatid), message
+                )
     except Exception as e:
         logger.error(
             f'Error in hezu_group_handler: {e}\n{traceback.format_exc()}'
@@ -285,9 +297,19 @@ async def hezu_channel_handler(event):
                 )
             message = f'{event.message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
             logger.debug(f'Ready to Transfer Channel Message: {message}')
-            await client.send_message(
-                int(environment.hezu_summary_chatid), message
-            )
+            try:
+                await client.send_message(
+                    int(environment.hezu_summary_chatid), message
+                )
+            except FloodError as e:
+                logger.error(
+                    f'Error in hezu_group_handler: {e}\n{traceback.format_exc()}'  # noqa
+                )
+                logger.info('Waiting for 300 seconds, and retry...')
+                await asyncio.sleep(300)
+                await client.send_message(
+                    int(environment.hezu_summary_chatid), message
+                )
     except Exception as e:
         logger.error(
             f'Error in hezu_channel_handler: {e}\n{traceback.format_exc()}'

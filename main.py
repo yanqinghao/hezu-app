@@ -167,7 +167,9 @@ async def hezu_group_handler(event):
     try:
         print(f'receive message for group: {event.message.text}')
         if event.message.text.startswith('#非审核车'):
-            parsed_message = await parse_message(event.message)
+            parsed_message = await parse_message(
+                event.message, is_channel=False
+            )
             db_manager.add_record(parsed_message)
             owner_id = parsed_message['owner_id']
             try:

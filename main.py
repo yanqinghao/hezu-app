@@ -34,13 +34,17 @@ async def parse_message(message, is_channel=True):
         )
     except:
         service_name = None
-    sender_id = message.from_id.user_id
-    try:
-        await client.get_dialogs()
-        user = await client.get_entity(owner_username)
-        sender_username = user.username
-    except:
-        sender_username = None
+    if message.sender is None:
+        sender_id = message.from_id.user_id
+        try:
+            await client.get_dialogs()
+            user = await client.get_entity(owner_username)
+            sender_username = user.username
+        except:
+            sender_username = None
+    else:
+        sender_id = message.sender.id
+        sender_username = message.sender.username
     message_info = (
         {
             'message': message.text,

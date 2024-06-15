@@ -1,6 +1,14 @@
+import logging
 from env import environment
 from db.manager import db_manager
 from telethon import TelegramClient, events
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
 
 # Remember to use your own values from my.telegram.org!
 client = TelegramClient(
@@ -35,7 +43,7 @@ async def parse_message(message, is_channel=True):
     except:
         service_name = None
     if message.sender is None:
-        print('get from from_id')
+        logger.info('get from from_id')
         sender_id = message.from_id.user_id
         try:
             await client.get_dialogs()
@@ -44,7 +52,7 @@ async def parse_message(message, is_channel=True):
         except:
             sender_username = None
     else:
-        print('get from sender')
+        logger.info('get from sender')
         sender_id = message.sender.id
         try:
             await client.get_dialogs()
@@ -85,13 +93,12 @@ async def parse_message(message, is_channel=True):
 
 
 async def init_channel_messages():
-    # 获取DB最新消息
     last_channel_id = db_manager.get_latest_channel_message_id()
     records = []
     async for message in client.iter_messages(
         int(environment.hezu_channel_chatid),
         limit=environment.channel_message_limit,
-    ):  # noqa
+    ):
         try:
             if message.text[0] != '#' or message.text.startswith('#恰饭广告'):
                 continue
@@ -102,28 +109,27 @@ async def init_channel_messages():
                 break
             records.append(parsed_message)
             if len(records) >= int(environment.batch_size):
-                print(
+                logger.info(
                     f'write {environment.batch_size} channel message rows to table'  # noqa
                 )
                 db_manager.add_records(records)
                 records = []
         except Exception as e:
-            print(e)
+            logger.error(e)
     if records:
-        print('write remain channel message rows to table')
+        logger.info('write remain channel message rows to table')
         db_manager.add_records(records)
         records = []
 
 
 async def init_group_messages():
-    # 获取DB最新消息
     last_group_id = db_manager.get_latest_group_message_id()
     records = []
 
     async for message in client.iter_messages(
         int(environment.hezu_group_chatid),
         limit=environment.group_message_limit,
-    ):  # noqa
+    ):
         try:
             if not message.text.startswith('#非审核车'):
                 continue
@@ -135,28 +141,27 @@ async def init_group_messages():
                 break
             records.append(parsed_message)
             if len(records) >= int(environment.batch_size):
-                print(
+                logger.info(
                     f'write {environment.batch_size} group message rows to table'  # noqa
                 )
                 db_manager.add_records(records)
                 records = []
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     if records:
-        print('write remain group message rows to table')
+        logger.info('write remain group message rows to table')
         db_manager.add_records(records)
         records = []
 
 
 async def main():
-    # Getting information about yourself
     me = await client.get_me()
-    print(me)
+    logger.info(me)
     await init_channel_messages()
-    print('channel message update success')
+    logger.info('channel message update success')
     await init_group_messages()
-    print('group message update success')
+    logger.info('group message update success')
 
 
 @client.on(
@@ -165,14 +170,8 @@ async def main():
     )
 )
 async def hezu_group_handler(event):
-    # Respond whenever someone says "Hello" and something else
-    # await event.reply('Hey!')
-    # 获取到最新消息
-    # 数据落库
-    # 查询数据库中该用户信息：几次更改昵称，几次开审核车，几次开非审核车，最近一周开车x次，最近一月开车x次，该车平均价位，该区平均价位
-    # 推送汇总频道：当前合租信息，结合历史数据分析结果
     try:
-        print(f'receive message for group: {event.message.text}')
+        logger.info(f'receive message for group: {event.message.text}')
         if event.message.text.startswith('#非审核车'):
             parsed_message = await parse_message(
                 event.message, is_channel=False
@@ -206,7 +205,7 @@ async def hezu_group_handler(event):
                 int(environment.hezu_summary_chatid), message
             )
     except Exception as e:
-        print(e)
+        logger.error(e)
 
 
 @client.on(
@@ -215,14 +214,8 @@ async def hezu_group_handler(event):
     )
 )
 async def hezu_channel_handler(event):
-    # Respond whenever someone says "Hello" and something else
-    # await event.reply('Hey!')
-    # 获取到最新消息
-    # 数据落库
-    # 查询数据库中该用户信息：几次更改昵称，几次开审核车，几次开非审核车，最近一周开车x次，最近一月开车x次，该车平均价位，该区平均价位
-    # 推送汇总频道：当前合租信息，结合历史数据分析结果
     try:
-        print(f'receive message for channel: {event.message.text}')
+        logger.info(f'receive message for channel: {event.message.text}')
         if event.message.text[0] != '#' or event.message.text.startswith(
             '#恰饭广告'
         ):
@@ -258,7 +251,7 @@ async def hezu_channel_handler(event):
                 int(environment.hezu_summary_chatid), message
             )
     except Exception as e:
-        print(e)
+        logger.error(e)
 
 
 with client:

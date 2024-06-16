@@ -8,7 +8,7 @@ from telethon.errors import FloodError
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
@@ -52,7 +52,6 @@ async def parse_message(message, is_channel=True):
             f'Error parsing service_name: {e}\n{traceback.format_exc()}'
         )
     if message.sender is None:
-        logger.info('get from from_id')
         sender_id = message.from_id.user_id
         try:
             user = await client.get_entity(sender_id)
@@ -63,7 +62,6 @@ async def parse_message(message, is_channel=True):
                 f'Error getting sender_username: {e}\n{traceback.format_exc()}'
             )
     else:
-        logger.info('get from sender')
         sender_id = message.sender.id
         try:
             user = await client.get_entity(sender_id)

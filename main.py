@@ -220,11 +220,13 @@ async def hezu_group_handler(event):
                     if user_id:
                         channel_count = (
                             db_manager.count_non_null_channel_message_id(
-                                user_id
+                                str(user_id)
                             )
                         )
                         group_count = (
-                            db_manager.count_non_null_group_message_id(user_id)
+                            db_manager.count_non_null_group_message_id(
+                                str(user_id)
+                            )
                         )
                     else:
                         channel_count = '未查到相关记录'
@@ -319,11 +321,13 @@ async def hezu_channel_handler(event):
                     if user_id:
                         channel_count = (
                             db_manager.count_non_null_channel_message_id(
-                                user_id
+                                str(user_id)
                             )
                         )
                         group_count = (
-                            db_manager.count_non_null_group_message_id(user_id)
+                            db_manager.count_non_null_group_message_id(
+                                str(user_id)
+                            )
                         )
                     else:
                         channel_count = '未查到相关记录'

@@ -174,11 +174,21 @@ class DBManager:
                     | (HezuRecords.owner_username == user_name),
                     HezuRecords.group_message_id.isnot(None),
                 )
+                .order_by(HezuRecords.send_at)
                 .all()
             )
 
             # 在内存中处理过滤逻辑
-            count = len(records)
+            if not records:
+                return 0
+
+            # 在内存中处理逻辑，计算 service_name 连续相同的次数
+            count = 1
+            prev_service_name = records[0].service_name
+            for record in records[1:]:
+                if record.service_name != prev_service_name:
+                    count += 1
+                prev_service_name = record.service_name
 
             return count
         finally:
@@ -200,11 +210,21 @@ class DBManager:
                     | (HezuRecords.owner_username.in_(usernames)),
                     HezuRecords.group_message_id.isnot(None),
                 )
+                .order_by(HezuRecords.send_at)
                 .all()
             )
 
             # 在内存中处理过滤逻辑
-            count = len(records)
+            if not records:
+                return 0
+
+            # 在内存中处理逻辑，计算 service_name 连续相同的次数
+            count = 1
+            prev_service_name = records[0].service_name
+            for record in records[1:]:
+                if record.service_name != prev_service_name:
+                    count += 1
+                prev_service_name = record.service_name
 
             return count
         finally:

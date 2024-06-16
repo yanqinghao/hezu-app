@@ -48,47 +48,85 @@ class DBManager:
     def count_non_null_channel_message_id(self, user_id):
         session = self.session()
         try:
-            # 创建别名用于用户查询
-            owner_alias = aliased(HezuRecords)
-            sender_alias = aliased(HezuRecords)
+            # 获取所有匹配的用户名
+            usernames = self.get_usernames_by_user_id(user_id)
 
-            # 查找 user_id 对应的所有用户名
-            usernames = (
-                session.query(
-                    case(
-                        (
-                            owner_alias.owner_username.isnot(None),
-                            owner_alias.owner_username,
-                        ),
-                        else_=sender_alias.sender_username,
-                    ).label('username')
-                )
-                .filter(
-                    (owner_alias.owner_id == user_id)
-                    | (sender_alias.sender_id == user_id)
-                )
-                .distinct()
-                .all()
-            )
-            usernames = [username[0] for username in usernames if username]
-
-            # 使用这些用户名和 user_id 查找记录数量
-            count = (
-                session.query(func.count(HezuRecords.id))
+            # 查找记录数量
+            records = (
+                session.query(HezuRecords)
                 .filter(
                     (HezuRecords.owner_id == user_id)
-                    | (HezuRecords.sender_id == user_id),
+                    | (HezuRecords.sender_id == user_id)
+                    | (HezuRecords.sender_username.in_(usernames))
+                    | (HezuRecords.owner_username.in_(usernames)),
                     HezuRecords.channel_message_id.isnot(None),
-                    (HezuRecords.owner_username.in_(usernames))
-                    | (HezuRecords.sender_username.in_(usernames)),
                 )
-                .scalar()
+                .all()
             )
+
+            # 在内存中处理过滤逻辑
+            count = len(records)
+
             return count
         finally:
             session.close()
 
-    def count_non_null_group_message_id(self, user_id):
+    def count_non_null_channel_message_id_by_name(self, user_name):
+        session = self.session()
+        try:
+
+            # 查找记录数量
+            records = (
+                session.query(HezuRecords)
+                .filter(
+                    (HezuRecords.sender_username == user_name)
+                    | (HezuRecords.owner_username == user_name),
+                    HezuRecords.channel_message_id.isnot(None),
+                )
+                .all()
+            )
+
+            # 在内存中处理过滤逻辑
+            count = len(records)
+
+            return count
+        finally:
+            session.close()
+
+    def get_user_id_by_username(self, username):
+        session = self.session()
+        try:
+            # 查找 sender_username 匹配的 user_id
+            sender_id = (
+                session.query(HezuRecords.sender_id)
+                .filter(
+                    HezuRecords.sender_username == username,
+                    HezuRecords.sender_id.isnot(None),
+                )
+                .first()
+            )
+
+            if sender_id:
+                return sender_id[0]
+
+            # 查找 owner_username 匹配的 user_id
+            owner_id = (
+                session.query(HezuRecords.owner_id)
+                .filter(
+                    HezuRecords.owner_username == username,
+                    HezuRecords.owner_id.isnot(None),
+                )
+                .first()
+            )
+
+            if owner_id:
+                return owner_id[0]
+
+            return None
+        finally:
+            session.close()
+
+    def get_usernames_by_user_id(self, user_id):
         session = self.session()
         try:
             # 创建别名用于用户查询
@@ -113,20 +151,54 @@ class DBManager:
                 .distinct()
                 .all()
             )
-            usernames = [username[0] for username in usernames if username]
+            return [username[0] for username in usernames if username]
+        finally:
+            session.close()
 
-            # 使用这些用户名和 user_id 查找记录数量
-            count = (
-                session.query(func.count(HezuRecords.id))
+    def count_non_null_group_message_id_by_name(self, user_name):
+        session = self.session()
+        try:
+
+            # 查找记录数量
+            records = (
+                session.query(HezuRecords)
+                .filter(
+                    (HezuRecords.sender_username == user_name)
+                    | (HezuRecords.owner_username == user_name),
+                    HezuRecords.group_message_id.isnot(None),
+                )
+                .all()
+            )
+
+            # 在内存中处理过滤逻辑
+            count = len(records)
+
+            return count
+        finally:
+            session.close()
+
+    def count_non_null_group_message_id(self, user_id):
+        session = self.session()
+        try:
+            # 获取所有匹配的用户名
+            usernames = self.get_usernames_by_user_id(user_id)
+
+            # 查找记录数量
+            records = (
+                session.query(HezuRecords)
                 .filter(
                     (HezuRecords.owner_id == user_id)
-                    | (HezuRecords.sender_id == user_id),
+                    | (HezuRecords.sender_id == user_id)
+                    | (HezuRecords.sender_username.in_(usernames))
+                    | (HezuRecords.owner_username.in_(usernames)),
                     HezuRecords.group_message_id.isnot(None),
-                    (HezuRecords.owner_username.in_(usernames))
-                    | (HezuRecords.sender_username.in_(usernames)),
                 )
-                .scalar()
+                .all()
             )
+
+            # 在内存中处理过滤逻辑
+            count = len(records)
+
             return count
         finally:
             session.close()

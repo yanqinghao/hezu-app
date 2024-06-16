@@ -200,6 +200,12 @@ async def hezu_group_handler(event):
             logger.debug(f'Parse Group Message: {parsed_message}')
             db_manager.add_record(parsed_message)
             user_id = parsed_message['owner_id'] or parsed_message['sender_id']
+            user_name = (
+                parsed_message['owner_username']
+                or parsed_message['sender_username']
+            )
+            if user_id is None and user_name is not None:
+                user_id = db_manager.get_user_id_by_username(user_name)
             if user_id:
                 try:
                     usernames = db_manager.get_user_info(user_id)
@@ -225,6 +231,27 @@ async def hezu_group_handler(event):
                     else:
                         channel_count = '未查到相关记录'
                         group_count = '未查到相关记录'
+                except Exception as e:
+                    channel_count = '未查到相关记录'
+                    group_count = '未查到相关记录'
+                    logger.error(
+                        f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
+                    )
+            elif user_name is not None:
+                usernames = []
+                usernames_str = '无改名记录'
+                try:
+                    channel_count = (
+                        db_manager.count_non_null_channel_message_id_by_name(
+                            user_name
+                        )
+                    )
+                    group_count = (
+                        db_manager.count_non_null_group_message_id_by_name(
+                            user_name
+                        )
+                    )
+
                 except Exception as e:
                     channel_count = '未查到相关记录'
                     group_count = '未查到相关记录'
@@ -274,7 +301,10 @@ async def hezu_channel_handler(event):
             parsed_message = await parse_message(event.message)
             logger.debug(f'Parse Channel Message: {parsed_message}')
             db_manager.add_record(parsed_message)
-            user_id = parsed_message['owner_id'] or parsed_message['sender_id']
+            user_id = parsed_message['owner_id']
+            user_name = parsed_message['owner_username']
+            if user_id is None and user_name is not None:
+                user_id = db_manager.get_user_id_by_username(user_name)
             if user_id:
                 try:
                     usernames = db_manager.get_user_info(user_id)
@@ -300,6 +330,27 @@ async def hezu_channel_handler(event):
                     else:
                         channel_count = '未查到相关记录'
                         group_count = '未查到相关记录'
+                except Exception as e:
+                    channel_count = '未查到相关记录'
+                    group_count = '未查到相关记录'
+                    logger.error(
+                        f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
+                    )
+            elif user_name is not None:
+                usernames = []
+                usernames_str = '无改名记录'
+                try:
+                    channel_count = (
+                        db_manager.count_non_null_channel_message_id_by_name(
+                            user_name
+                        )
+                    )
+                    group_count = (
+                        db_manager.count_non_null_group_message_id_by_name(
+                            user_name
+                        )
+                    )
+
                 except Exception as e:
                     channel_count = '未查到相关记录'
                     group_count = '未查到相关记录'

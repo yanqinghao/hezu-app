@@ -206,7 +206,9 @@ async def hezu_group_handler(event):
                 user_id = db_manager.get_user_id_by_username(user_name)
             if user_id:
                 try:
-                    usernames = db_manager.get_user_info(user_id)
+                    usernames = db_manager.get_usernames_by_user_id(
+                        str(user_id)
+                    )
                 except Exception as e:
                     usernames = []
                     logger.error(
@@ -307,7 +309,9 @@ async def hezu_channel_handler(event):
                 user_id = db_manager.get_user_id_by_username(user_name)
             if user_id:
                 try:
-                    usernames = db_manager.get_user_info(user_id)
+                    usernames = db_manager.get_usernames_by_user_id(
+                        str(user_id)
+                    )
                 except Exception as e:
                     usernames = []
                     logger.error(

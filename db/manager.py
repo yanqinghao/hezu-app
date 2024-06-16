@@ -1,8 +1,8 @@
 from env import environment
 from db.table import Base, HezuRecords
 from urllib.parse import quote_plus
-from sqlalchemy import create_engine, func, cast, Integer, case
-from sqlalchemy.orm import sessionmaker, aliased
+from sqlalchemy import create_engine, func, cast, Integer, String
+from sqlalchemy.orm import sessionmaker
 
 
 class DBManager:
@@ -129,29 +129,36 @@ class DBManager:
     def get_usernames_by_user_id(self, user_id):
         session = self.session()
         try:
-            # 创建别名用于用户查询
-            owner_alias = aliased(HezuRecords)
-            sender_alias = aliased(HezuRecords)
-
-            # 查找 user_id 对应的所有用户名
-            usernames = (
+            # 查找 user_id 对应的所有 owner_usernames
+            owner_usernames = (
                 session.query(
-                    case(
-                        (
-                            owner_alias.owner_username.isnot(None),
-                            owner_alias.owner_username,
-                        ),
-                        else_=sender_alias.sender_username,
-                    ).label('username')
+                    cast(HezuRecords.owner_username, String).label('username')
                 )
-                .filter(
-                    (owner_alias.owner_id == user_id)
-                    | (sender_alias.sender_id == user_id)
-                )
+                .filter(HezuRecords.owner_id == user_id)
                 .distinct()
                 .all()
             )
-            return [username[0] for username in usernames if username]
+
+            # 查找 user_id 对应的所有 sender_usernames
+            sender_usernames = (
+                session.query(
+                    cast(HezuRecords.sender_username, String).label('username')
+                )
+                .filter(HezuRecords.sender_id == user_id)
+                .distinct()
+                .all()
+            )
+
+            # 合并并去重
+            usernames = set(
+                [
+                    username[0]
+                    for username in owner_usernames + sender_usernames
+                    if username
+                ]
+            )
+
+            return list(usernames)
         finally:
             session.close()
 

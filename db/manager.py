@@ -154,7 +154,7 @@ class DBManager:
                 [
                     username[0]
                     for username in owner_usernames + sender_usernames
-                    if username
+                    if username[0]
                 ]
             )
 

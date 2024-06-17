@@ -24,7 +24,10 @@ client = TelegramClient(
 
 async def parse_message(message, is_channel=True):
     try:
-        owner_username = message.text.split('@')[-1].strip()
+        if '@' in  message.text:
+            owner_username = message.text.split('@')[-1].strip()
+        else:
+            owner_username = None
     except Exception as e:
         owner_username = None
         logger.error(

@@ -2,7 +2,9 @@ FROM python:3.12-slim-buster
 
 WORKDIR /code
 
-COPY . /code
+COPY main.py env.py requirements.txt /code/
+
+COPY db/ /code/
 
 RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list && \
     sed -i 's|security.debian.org/debian-security|mirrors.ustc.edu.cn/debian-security|g' /etc/apt/sources.list && \

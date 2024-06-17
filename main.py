@@ -283,7 +283,7 @@ async def lookup_group_messages():
         try:
             if not message.text.startswith('#非审核车'):
                 continue
-            parsed_message = await parse_message(message)
+            parsed_message = await parse_message(message, is_channel=False)
             if (
                 last_group_id
                 and parsed_message['group_message_id'] <= last_group_id

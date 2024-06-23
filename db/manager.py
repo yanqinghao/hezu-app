@@ -45,7 +45,7 @@ class DBManager:
         finally:
             session.close()
 
-    def count_non_null_channel_message_id(self, user_id):
+    def count_channel_message_id(self, user_id):
         session = self.session()
         try:
             # 获取所有匹配的用户名
@@ -71,7 +71,30 @@ class DBManager:
         finally:
             session.close()
 
-    def count_non_null_channel_message_id_by_name(self, user_name):
+    def count_channel_types(self, user_id):
+        session = self.session()
+        try:
+            # 获取所有匹配的用户名
+            usernames = self.get_usernames_by_user_id(user_id)
+
+            # 查找记录数量
+            records = (
+                session.query(HezuRecords)
+                .filter(
+                    (HezuRecords.owner_id == user_id)
+                    | (HezuRecords.sender_id == user_id)
+                    | (HezuRecords.sender_username.in_(usernames))
+                    | (HezuRecords.owner_username.in_(usernames)),
+                    HezuRecords.channel_message_id.isnot(None),
+                )
+                .all()
+            )
+
+            return list(set([rec.service_name for rec in records]))
+        finally:
+            session.close()
+
+    def count_channel_message_id_by_name(self, user_name):
         session = self.session()
         try:
 
@@ -90,6 +113,25 @@ class DBManager:
             count = len(records)
 
             return count
+        finally:
+            session.close()
+
+    def count_channel_types_by_name(self, user_name):
+        session = self.session()
+        try:
+
+            # 查找记录数量
+            records = (
+                session.query(HezuRecords)
+                .filter(
+                    (HezuRecords.sender_username == user_name)
+                    | (HezuRecords.owner_username == user_name),
+                    HezuRecords.channel_message_id.isnot(None),
+                )
+                .all()
+            )
+
+            return list(set([rec.service_name for rec in records]))
         finally:
             session.close()
 
@@ -162,7 +204,7 @@ class DBManager:
         finally:
             session.close()
 
-    def count_non_null_group_message_id_by_name(self, user_name):
+    def count_group_message_id_by_name(self, user_name):
         session = self.session()
         try:
 
@@ -194,7 +236,27 @@ class DBManager:
         finally:
             session.close()
 
-    def count_non_null_group_message_id(self, user_id):
+    def count_group_types_by_name(self, user_name):
+        session = self.session()
+        try:
+
+            # 查找记录数量
+            records = (
+                session.query(HezuRecords)
+                .filter(
+                    (HezuRecords.sender_username == user_name)
+                    | (HezuRecords.owner_username == user_name),
+                    HezuRecords.group_message_id.isnot(None),
+                )
+                .order_by(HezuRecords.send_at)
+                .all()
+            )
+
+            return list(set([rec.service_name for rec in records]))
+        finally:
+            session.close()
+
+    def count_group_message_id(self, user_id):
         session = self.session()
         try:
             # 获取所有匹配的用户名
@@ -227,6 +289,30 @@ class DBManager:
                 prev_service_name = record.service_name
 
             return count
+        finally:
+            session.close()
+
+    def count_group_types(self, user_id):
+        session = self.session()
+        try:
+            # 获取所有匹配的用户名
+            usernames = self.get_usernames_by_user_id(user_id)
+
+            # 查找记录数量
+            records = (
+                session.query(HezuRecords)
+                .filter(
+                    (HezuRecords.owner_id == user_id)
+                    | (HezuRecords.sender_id == user_id)
+                    | (HezuRecords.sender_username.in_(usernames))
+                    | (HezuRecords.owner_username.in_(usernames)),
+                    HezuRecords.group_message_id.isnot(None),
+                )
+                .order_by(HezuRecords.send_at)
+                .all()
+            )
+
+            return list(set([rec.service_name for rec in records]))
         finally:
             session.close()
 

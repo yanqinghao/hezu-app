@@ -1,17 +1,11 @@
-import logging
 import asyncio
 import traceback
+from log import logger
 from env import environment
 from db.manager import db_manager
+from message.handler import BatchProcessHandler, MessageHandler, CHANNEL, GROUP
 from telethon import TelegramClient, events
 from telethon.errors import FloodError
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
 
 # Remember to use your own values from my.telegram.org!
 client = TelegramClient(
@@ -21,10 +15,13 @@ client = TelegramClient(
     # proxy={'proxy_type': 'socks5', 'addr': '127.0.0.1', 'port': '1080'},
 )
 
+batch_processer = BatchProcessHandler(client)
+message_processer = MessageHandler(client)
+
 
 async def parse_message(message, is_channel=True):
     try:
-        if '@' in  message.text:
+        if '@' in message.text:
             owner_username = message.text.split('@')[-1].strip()
         else:
             owner_username = None
@@ -107,280 +104,19 @@ async def parse_message(message, is_channel=True):
 
 
 async def init_channel_messages():
-    last_channel_id = db_manager.get_latest_channel_message_id()
-    records = []
-    async for message in client.iter_messages(
-        int(environment.hezu_channel_chatid),
-        limit=environment.channel_message_limit,
-    ):
-        try:
-            if message.text[0] != '#' or message.text.startswith('#恰饭广告'):
-                continue
-            parsed_message = await parse_message(message)
-            if last_channel_id and parsed_message['channel_message_id'] <= int(
-                last_channel_id
-            ):
-                break
-            records.append(parsed_message)
-            if len(records) >= int(environment.batch_size):
-                logger.info(
-                    f'write {environment.batch_size} channel message rows to table'  # noqa
-                )
-                db_manager.add_records(records)
-                records = []
-        except Exception as e:
-            logger.error(
-                f'Error in init_channel_messages: {e}\n{traceback.format_exc()}'  # noqa
-            )
-    if records:
-        logger.info('write remain channel message rows to table')
-        db_manager.add_records(records)
-        records = []
+    await batch_processer.run_history(CHANNEL)
 
 
 async def init_group_messages():
-    last_group_id = db_manager.get_latest_group_message_id()
-    records = []
-
-    async for message in client.iter_messages(
-        int(environment.hezu_group_chatid),
-        limit=environment.group_message_limit,
-    ):
-        try:
-            if not message.text.startswith('#非审核车'):
-                continue
-            parsed_message = await parse_message(message, is_channel=False)
-            if (
-                last_group_id
-                and parsed_message['group_message_id'] <= last_group_id
-            ):
-                break
-            records.append(parsed_message)
-            if len(records) >= int(environment.batch_size):
-                logger.info(
-                    f'write {environment.batch_size} group message rows to table'  # noqa
-                )
-                db_manager.add_records(records)
-                records = []
-        except Exception as e:
-            logger.error(
-                f'Error in init_group_messages: {e}\n{traceback.format_exc()}'
-            )
-
-    if records:
-        logger.info('write remain group message rows to table')
-        db_manager.add_records(records)
-        records = []
+    await batch_processer.run_history(GROUP)
 
 
-async def lookup_channel_messages():
-    last_channel_id = db_manager.get_latest_channel_message_id()
-    async for message in client.iter_messages(
-        int(environment.hezu_channel_chatid),
-        limit=environment.channel_message_limit,
-    ):
-        try:
-            if message.text[0] != '#' or message.text.startswith('#恰饭广告'):
-                continue
-            parsed_message = await parse_message(message)
-            if last_channel_id and parsed_message['channel_message_id'] <= int(
-                last_channel_id
-            ):
-                break
-            logger.debug(f'Parse Channel Message: {parsed_message}')
-            db_manager.add_record(parsed_message)
-            user_id = parsed_message['owner_id']
-            user_name = parsed_message['owner_username']
-            if user_id is None and user_name is not None:
-                user_id = db_manager.get_user_id_by_username(user_name)
-            if user_id:
-                try:
-                    usernames = db_manager.get_usernames_by_user_id(
-                        str(user_id)
-                    )
-                except Exception as e:
-                    usernames = []
-                    logger.error(
-                        f'Error getting usernames: {e}\n{traceback.format_exc()}'  # noqa
-                    )
-                if usernames:
-                    usernames_str = ','.join(usernames)
-                else:
-                    usernames_str = '无改名记录'
-                try:
-                    if user_id:
-                        channel_count = (
-                            db_manager.count_non_null_channel_message_id(
-                                str(user_id)
-                            )
-                        )
-                        group_count = (
-                            db_manager.count_non_null_group_message_id(
-                                str(user_id)
-                            )
-                        )
-                    else:
-                        channel_count = '未查到相关记录'
-                        group_count = '未查到相关记录'
-                except Exception as e:
-                    channel_count = '未查到相关记录'
-                    group_count = '未查到相关记录'
-                    logger.error(
-                        f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
-                    )
-            elif user_name is not None:
-                usernames = []
-                usernames_str = '无改名记录'
-                try:
-                    channel_count = (
-                        db_manager.count_non_null_channel_message_id_by_name(
-                            user_name
-                        )
-                    )
-                    group_count = (
-                        db_manager.count_non_null_group_message_id_by_name(
-                            user_name
-                        )
-                    )
-
-                except Exception as e:
-                    channel_count = '未查到相关记录'
-                    group_count = '未查到相关记录'
-                    logger.error(
-                        f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
-                    )
-            else:
-                usernames = []
-                usernames_str = '无改名记录'
-                channel_count = '未查到相关记录'
-                group_count = '未查到相关记录'
-            summary_message = f'{message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
-            logger.debug(
-                f'Ready to Transfer Channel Message: {summary_message}'
-            )
-            try:
-                await client.send_message(
-                    int(environment.hezu_summary_chatid), summary_message
-                )
-            except FloodError as e:
-                logger.error(
-                    f'Error in hezu_group_handler: {e}\n{traceback.format_exc()}'  # noqa
-                )
-                logger.info('Waiting for 300 seconds, and retry...')
-                await asyncio.sleep(300)
-                await client.send_message(
-                    int(environment.hezu_summary_chatid), message
-                )
-        except Exception as e:
-            logger.error(
-                f'Error in lookup_group_messages: {e}\n{traceback.format_exc()}'  # noqa
-            )
+async def sync_channel_messages():
+    await batch_processer.run_sync(CHANNEL)
 
 
-async def lookup_group_messages():
-    last_group_id = db_manager.get_latest_group_message_id()
-    async for message in client.iter_messages(
-        int(environment.hezu_group_chatid),
-        limit=environment.group_message_limit,
-    ):
-        try:
-            if not message.text.startswith('#非审核车'):
-                continue
-            parsed_message = await parse_message(message, is_channel=False)
-            if (
-                last_group_id
-                and parsed_message['group_message_id'] <= last_group_id
-            ):
-                break
-            logger.debug(f'Parse Group Message: {parsed_message}')
-            db_manager.add_record(parsed_message)
-            user_id = parsed_message['owner_id'] or parsed_message['sender_id']
-            user_name = (
-                parsed_message['owner_username']
-                or parsed_message['sender_username']
-            )
-            if user_id is None and user_name is not None:
-                user_id = db_manager.get_user_id_by_username(user_name)
-            if user_id:
-                try:
-                    usernames = db_manager.get_usernames_by_user_id(
-                        str(user_id)
-                    )
-                except Exception as e:
-                    usernames = []
-                    logger.error(
-                        f'Error getting usernames: {e}\n{traceback.format_exc()}'  # noqa
-                    )
-                if usernames:
-                    usernames_str = ','.join(usernames)
-                else:
-                    usernames_str = '无改名记录'
-                try:
-                    if user_id:
-                        channel_count = (
-                            db_manager.count_non_null_channel_message_id(
-                                str(user_id)
-                            )
-                        )
-                        group_count = (
-                            db_manager.count_non_null_group_message_id(
-                                str(user_id)
-                            )
-                        )
-                    else:
-                        channel_count = '未查到相关记录'
-                        group_count = '未查到相关记录'
-                except Exception as e:
-                    channel_count = '未查到相关记录'
-                    group_count = '未查到相关记录'
-                    logger.error(
-                        f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
-                    )
-            elif user_name is not None:
-                usernames = []
-                usernames_str = '无改名记录'
-                try:
-                    channel_count = (
-                        db_manager.count_non_null_channel_message_id_by_name(
-                            user_name
-                        )
-                    )
-                    group_count = (
-                        db_manager.count_non_null_group_message_id_by_name(
-                            user_name
-                        )
-                    )
-
-                except Exception as e:
-                    channel_count = '未查到相关记录'
-                    group_count = '未查到相关记录'
-                    logger.error(
-                        f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
-                    )
-            else:
-                usernames = []
-                usernames_str = '无改名记录'
-                channel_count = '未查到相关记录'
-                group_count = '未查到相关记录'
-            summary_message = f'{message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
-            logger.debug(f'Ready to Transfer Group Message: {summary_message}')
-            try:
-                await client.send_message(
-                    int(environment.hezu_summary_chatid), summary_message
-                )
-            except FloodError as e:
-                logger.error(
-                    f'Error in hezu_group_handler: {e}\n{traceback.format_exc()}'  # noqa
-                )
-                logger.info('Waiting for 300 seconds, and retry...')
-                await asyncio.sleep(300)
-                await client.send_message(
-                    int(environment.hezu_summary_chatid), message
-                )
-        except Exception as e:
-            logger.error(
-                f'Error in lookup_group_messages: {e}\n{traceback.format_exc()}'  # noqa
-            )
+async def sync_group_messages():
+    await batch_processer.run_sync(GROUP)
 
 
 async def scheduled_task():
@@ -388,9 +124,9 @@ async def scheduled_task():
     while True:
         try:
             logger.info('start to sync channel and group messages...')
-            await lookup_channel_messages()
+            await sync_channel_messages()
             logger.info('sync channel messages complete')
-            await lookup_group_messages()
+            await sync_group_messages()
             logger.info('sync group messages complete')
         except Exception as e:
             logger.error(

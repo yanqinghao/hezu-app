@@ -316,10 +316,9 @@ class BatchProcessHandler(BaseHandler):
                 parsed_message = await self.parse_message(
                     message, channel_or_group
                 )
-                current_message_id = (
-                    parsed_message['channel_message_id']
-                    or parsed_message['group_message_id']
-                )
+                current_message_id = parsed_message.get(
+                    'channel_message_id'
+                ) or parsed_message.get('group_message_id')
                 if last_message_id and current_message_id <= int(
                     last_message_id
                 ):
@@ -368,10 +367,9 @@ class BatchProcessHandler(BaseHandler):
                 parsed_message = await self.parse_message(
                     message, channel_or_group
                 )
-                current_message_id = (
-                    parsed_message['channel_message_id']
-                    or parsed_message['group_message_id']
-                )
+                current_message_id = parsed_message.get(
+                    'channel_message_id'
+                ) or parsed_message.get('group_message_id')
                 if last_message_id and current_message_id <= int(
                     last_message_id
                 ):

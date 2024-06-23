@@ -270,7 +270,7 @@ class MessageHandler(BaseHandler):
                 summary_message += self.count_history_types(user_id, user_name)
                 summary_message += self.count_used_usernames(user_id)
                 logger.debug(f'Ready to Transfer Channel Message: {message}')
-                self.send_message_to_a_channel(summary_message)
+                await self.send_message_to_a_channel(summary_message)
         except Exception as e:
             logger.error(
                 f'Error in hezu_channel_handler: {e}\n{traceback.format_exc()}'
@@ -387,7 +387,7 @@ class BatchProcessHandler(BaseHandler):
                 logger.debug(
                     f'Ready to Transfer Channel Message: {summary_message}'
                 )
-                self.send_message_to_a_channel(summary_message)
+                await self.send_message_to_a_channel(summary_message)
             except Exception as e:
                 logger.error(
                     f'Error in lookup_group_messages: {e}\n{traceback.format_exc()}'  # noqa

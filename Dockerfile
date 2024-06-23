@@ -2,9 +2,11 @@ FROM python:3.12-alpine
 
 WORKDIR /code
 
-COPY main.py env.py requirements.txt /code/
+COPY main.py env.py log.py requirements.txt /code/
 
 COPY db/ /code/db/
+
+COPY message/ /code/message/
 
 RUN apk update && \
     apk add --no-cache dumb-init netcat-openbsd curl && \

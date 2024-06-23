@@ -16,6 +16,118 @@ class BaseHandler:
     def __init__(self, client: TelegramClient) -> None:
         self.client = client
 
+    def count_used_usernames(self, user_id):
+        if user_id:
+            try:
+                usernames = db_manager.get_usernames_by_user_id(str(user_id))
+            except Exception as e:
+                usernames = []
+                logger.error(
+                    f'Error getting usernames: {e}\n{traceback.format_exc()}'  # noqa
+                )
+            if len(usernames) > 1:
+                return '\n车主存在改名行为：' + ','.join(usernames)
+            else:
+                return ''
+        else:
+            return ''
+
+    def count_history_types(self, user_id, user_name):
+        if user_id:
+            try:
+                channel_services = db_manager.count_channel_types(str(user_id))
+                group_services = db_manager.count_group_types(str(user_id))
+                if channel_services or group_services:
+                    return (
+                        '\n车主' + f'审核发车种类：{",".join(channel_services)}'
+                        if channel_services
+                        else '' + f'非审核发车种类：{",".join(group_services)}'
+                        if group_services
+                        else ''
+                    )
+                else:
+                    return ''
+            except Exception as e:
+                logger.error(
+                    f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
+                )
+                return ''
+        elif user_id is None and user_name:
+            try:
+                channel_services = db_manager.count_channel_types_by_name(
+                    user_name
+                )  # noqa
+                group_services = db_manager.count_group_types_by_name(
+                    user_name
+                )
+                if channel_services or group_services:
+                    return (
+                        '\n车主' + f'审核发车种类：{",".join(channel_services)}'
+                        if channel_services
+                        else '' + f'非审核发车种类：{",".join(group_services)}'
+                        if group_services
+                        else ''
+                    )
+                else:
+                    return ''
+            except Exception as e:
+                logger.error(
+                    f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
+                )
+                return ''
+        else:
+            return ''
+
+    def count_history_times(self, user_id, user_name):
+        if user_id:
+            try:
+                channel_count = db_manager.count_channel_message_id(
+                    str(user_id)
+                )
+                group_count = db_manager.count_group_message_id(str(user_id))
+                if channel_count or group_count:
+                    return (
+                        '\n车主' + '审核车{}次'
+                        if channel_count
+                        else '' + '，非审核车{}次'
+                        if group_count
+                        else ''
+                    )
+                else:
+                    return ''
+            except Exception as e:
+                logger.error(
+                    f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
+                )
+                return ''
+        elif user_id is None and user_name:
+            try:
+                channel_count = (
+                    db_manager.count_channel_message_id_by_name(  # noqa
+                        user_name
+                    )
+                )
+                group_count = db_manager.count_group_message_id_by_name(
+                    user_name
+                )
+                if channel_count or group_count:
+                    return (
+                        '\n车主' + '审核车{}次'
+                        if channel_count
+                        else '' + '，非审核车{}次'
+                        if group_count
+                        else ''
+                    )
+                else:
+                    return ''
+            except Exception as e:
+                logger.error(
+                    f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
+                )
+                return ''
+        else:
+            return ''
+
     async def send_message_to_a_channel(self, message, retry=3):
         try:
             await self.client.send_message(
@@ -126,19 +238,7 @@ class MessageHandler(BaseHandler):
     def __init__(self, client: TelegramClient) -> None:
         super().__init__(client)
 
-    def count_used_username(self):
-        pass
-
-    def count_non_audit_times(self):
-        pass
-
-    def count_audit_times(self):
-        pass
-
     def generate_notice(self):
-        pass
-
-    def send_to_channel(self):
         pass
 
     async def run(self, message, channel_or_group):
@@ -164,69 +264,13 @@ class MessageHandler(BaseHandler):
                 user_name = parsed_message['owner_username']
                 if user_id is None and user_name is not None:
                     user_id = db_manager.get_user_id_by_username(user_name)
-                if user_id:
-                    try:
-                        usernames = db_manager.get_usernames_by_user_id(
-                            str(user_id)
-                        )
-                    except Exception as e:
-                        usernames = []
-                        logger.error(
-                            f'Error getting usernames: {e}\n{traceback.format_exc()}'  # noqa
-                        )
-                    if usernames:
-                        usernames_str = ','.join(usernames)
-                    else:
-                        usernames_str = '无改名记录'
-                    try:
-                        if user_id:
-                            channel_count = (
-                                db_manager.count_non_null_channel_message_id(
-                                    str(user_id)
-                                )
-                            )
-                            group_count = (
-                                db_manager.count_non_null_group_message_id(
-                                    str(user_id)
-                                )
-                            )
-                        else:
-                            channel_count = '未查到相关记录'
-                            group_count = '未查到相关记录'
-                    except Exception as e:
-                        channel_count = '未查到相关记录'
-                        group_count = '未查到相关记录'
-                        logger.error(
-                            f'''Error counting messages: {e}\n
-                            {traceback.format_exc()}'''
-                        )
-                elif user_name is not None:
-                    usernames = []
-                    usernames_str = '无改名记录'
-                    try:
-                        channel_count = db_manager.count_non_null_channel_message_id_by_name(  # noqa
-                            user_name
-                        )
-                        group_count = (
-                            db_manager.count_non_null_group_message_id_by_name(
-                                user_name
-                            )
-                        )
 
-                    except Exception as e:
-                        channel_count = '未查到相关记录'
-                        group_count = '未查到相关记录'
-                        logger.error(
-                            f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
-                        )
-                else:
-                    usernames = []
-                    usernames_str = '无改名记录'
-                    channel_count = '未查到相关记录'
-                    group_count = '未查到相关记录'
-                message = f'{message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
+                summary_message = message.text + '\n'
+                summary_message += self.count_history_times(user_id, user_name)
+                summary_message += self.count_history_types(user_id, user_name)
+                summary_message += self.count_used_usernames(user_id)
                 logger.debug(f'Ready to Transfer Channel Message: {message}')
-                self.send_message_to_a_channel(message)
+                self.send_message_to_a_channel(summary_message)
         except Exception as e:
             logger.error(
                 f'Error in hezu_channel_handler: {e}\n{traceback.format_exc()}'
@@ -338,71 +382,14 @@ class BatchProcessHandler(BaseHandler):
                 user_name = parsed_message['owner_username']
                 if user_id is None and user_name is not None:
                     user_id = db_manager.get_user_id_by_username(user_name)
-                if user_id:
-                    try:
-                        usernames = db_manager.get_usernames_by_user_id(
-                            str(user_id)
-                        )
-                    except Exception as e:
-                        usernames = []
-                        logger.error(
-                            f'Error getting usernames: {e}\n{traceback.format_exc()}'  # noqa
-                        )
-                    if usernames:
-                        usernames_str = ','.join(usernames)
-                    else:
-                        usernames_str = '无改名记录'
-                    try:
-                        if user_id:
-                            channel_count = (
-                                db_manager.count_non_null_channel_message_id(
-                                    str(user_id)
-                                )
-                            )
-                            group_count = (
-                                db_manager.count_non_null_group_message_id(
-                                    str(user_id)
-                                )
-                            )
-                        else:
-                            channel_count = '未查到相关记录'
-                            group_count = '未查到相关记录'
-                    except Exception as e:
-                        channel_count = '未查到相关记录'
-                        group_count = '未查到相关记录'
-                        logger.error(
-                            f'''Error counting messages: {e}\n
-                            {traceback.format_exc()}'''
-                        )
-                elif user_name is not None:
-                    usernames = []
-                    usernames_str = '无改名记录'
-                    try:
-                        channel_count = db_manager.count_non_null_channel_message_id_by_name(  # noqa
-                            user_name
-                        )
-                        group_count = (
-                            db_manager.count_non_null_group_message_id_by_name(
-                                user_name
-                            )
-                        )
-
-                    except Exception as e:
-                        channel_count = '未查到相关记录'
-                        group_count = '未查到相关记录'
-                        logger.error(
-                            f'Error counting messages: {e}\n{traceback.format_exc()}'  # noqa
-                        )
-                else:
-                    usernames = []
-                    usernames_str = '无改名记录'
-                    channel_count = '未查到相关记录'
-                    group_count = '未查到相关记录'
-                summary_message = f'{message.text}\n该用户改名次数：{len(usernames)}\n该用户历史名字：{usernames_str}\n该用户开审核车次数：{channel_count}\n该用户开非审核车次数：{group_count}'  # noqa
+                summary_message = message.text + '\n'
+                summary_message += self.count_history_times(user_id, user_name)
+                summary_message += self.count_history_types(user_id, user_name)
+                summary_message += self.count_used_usernames(user_id)
                 logger.debug(
                     f'Ready to Transfer Channel Message: {summary_message}'
                 )
-                self.send_message_to_a_channel(message)
+                self.send_message_to_a_channel(summary_message)
             except Exception as e:
                 logger.error(
                     f'Error in lookup_group_messages: {e}\n{traceback.format_exc()}'  # noqa

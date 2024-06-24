@@ -26,7 +26,7 @@ class BaseHandler:
                     f'Error getting usernames: {e}\n{traceback.format_exc()}'  # noqa
                 )
             if len(usernames) > 1:
-                return '\n车主存在改名行为：' + ','.join(usernames)
+                return '\n车主改名历史：' + ','.join(usernames)
             else:
                 return ''
         else:
@@ -62,9 +62,9 @@ class BaseHandler:
                 )
                 if channel_services or group_services:
                     return (
-                        '\n车主' + f'审核发车种类：{",".join(channel_services)}'
+                        '\n车主' + f' 审核发车种类：{",".join(channel_services)}'
                         if channel_services
-                        else '' + f'非审核发车种类：{",".join(group_services)}'
+                        else '' + f' 非审核发车种类：{",".join(group_services)}'
                         if group_services
                         else ''
                     )
@@ -112,7 +112,7 @@ class BaseHandler:
                 )
                 if channel_count or group_count:
                     return (
-                        '\n车主' + f' 审核车{channel_count}次'
+                        '\n车主发布' + f' 审核车{channel_count}次'
                         if channel_count
                         else '' + f' 非审核车{group_count}次'
                         if group_count
